@@ -13,6 +13,7 @@ pub mod beacon_state;
 pub mod candidate_pow_receipt_root_record;
 pub mod casper_slashing;
 pub mod crosslink_record;
+pub mod custody_challenge;
 pub mod deposit;
 pub mod deposit_data;
 pub mod deposit_input;
