@@ -1,9 +1,9 @@
-use super::candidate_pow_receipt_root_record::CandidatePoWReceiptRootRecord;
 use super::crosslink_record::CrosslinkRecord;
+use super::custody_challenge::CustodyChallenge;
+use super::deposit_root_vote::DepositRootVote;
 use super::fork_data::ForkData;
 use super::pending_attestation_record::PendingAttestationRecord;
 use super::shard_committee::ShardCommittee;
-use super::shard_reassignment_record::ShardReassignmentRecord;
 use super::validator_record::ValidatorRecord;
 use super::Hash256;
 use crate::test_utils::TestRandom;
@@ -26,11 +26,12 @@ pub struct BeaconState {
     pub validator_registry_delta_chain_tip: Hash256,
 
     // Randomness and committees
-    pub randao_mix: Hash256,
-    pub next_seed: Hash256,
+    pub latest_randao_mixes: Vec<Hash256>,
+    pub latest_vdf_outputs: Vec<Hash256>,
     pub shard_committees_at_slots: Vec<Vec<ShardCommittee>>,
-    pub persistent_committees: Vec<Vec<u32>>,
-    pub persistent_committee_reassignments: Vec<ShardReassignmentRecord>,
+
+    // Custody challenges
+    pub custody_challenges: Vec<CustodyChallenge>,
 
     // Finality
     pub previous_justified_slot: u64,
@@ -43,10 +44,11 @@ pub struct BeaconState {
     pub latest_block_roots: Vec<Hash256>,
     pub latest_penalized_exit_balances: Vec<u64>,
     pub latest_attestations: Vec<PendingAttestationRecord>,
+    pub batched_block_roots: Vec<Hash256>,
 
-    // PoW receipt root
-    pub processed_pow_receipt_root: Hash256,
-    pub candidate_pow_receipt_roots: Vec<CandidatePoWReceiptRootRecord>,
+    // Ethereum 1.0 deposit root
+    pub latest_deposit_root: Hash256,
+    pub deposit_root_votes: Vec<DepositRootVote>,
 }
 
 impl BeaconState {
@@ -67,11 +69,9 @@ impl Encodable for BeaconState {
         s.append(&self.validator_registry_latest_change_slot);
         s.append(&self.validator_registry_exit_count);
         s.append(&self.validator_registry_delta_chain_tip);
-        s.append(&self.randao_mix);
-        s.append(&self.next_seed);
-        s.append(&self.shard_committees_at_slots);
-        s.append(&self.persistent_committees);
-        s.append(&self.persistent_committee_reassignments);
+        s.append(&self.latest_randao_mixes);
+        s.append(&self.latest_vdf_outputs);
+        s.append(&self.custody_challenges);
         s.append(&self.previous_justified_slot);
         s.append(&self.justified_slot);
         s.append(&self.justification_bitfield);
@@ -80,8 +80,9 @@ impl Encodable for BeaconState {
         s.append(&self.latest_block_roots);
         s.append(&self.latest_penalized_exit_balances);
         s.append(&self.latest_attestations);
-        s.append(&self.processed_pow_receipt_root);
-        s.append(&self.candidate_pow_receipt_roots);
+        s.append(&self.batched_block_roots);
+        s.append(&self.latest_deposit_root);
+        s.append(&self.deposit_root_votes);
     }
 }
 
@@ -95,11 +96,10 @@ impl Decodable for BeaconState {
         let (validator_registry_latest_change_slot, i) = <_>::ssz_decode(bytes, i)?;
         let (validator_registry_exit_count, i) = <_>::ssz_decode(bytes, i)?;
         let (validator_registry_delta_chain_tip, i) = <_>::ssz_decode(bytes, i)?;
-        let (randao_mix, i) = <_>::ssz_decode(bytes, i)?;
-        let (next_seed, i) = <_>::ssz_decode(bytes, i)?;
+        let (latest_randao_mixes, i) = <_>::ssz_decode(bytes, i)?;
+        let (latest_vdf_outputs, i) = <_>::ssz_decode(bytes, i)?;
         let (shard_committees_at_slots, i) = <_>::ssz_decode(bytes, i)?;
-        let (persistent_committees, i) = <_>::ssz_decode(bytes, i)?;
-        let (persistent_committee_reassignments, i) = <_>::ssz_decode(bytes, i)?;
+        let (custody_challenges, i) = <_>::ssz_decode(bytes, i)?;
         let (previous_justified_slot, i) = <_>::ssz_decode(bytes, i)?;
         let (justified_slot, i) = <_>::ssz_decode(bytes, i)?;
         let (justification_bitfield, i) = <_>::ssz_decode(bytes, i)?;
@@ -108,8 +108,9 @@ impl Decodable for BeaconState {
         let (latest_block_roots, i) = <_>::ssz_decode(bytes, i)?;
         let (latest_penalized_exit_balances, i) = <_>::ssz_decode(bytes, i)?;
         let (latest_attestations, i) = <_>::ssz_decode(bytes, i)?;
-        let (processed_pow_receipt_root, i) = <_>::ssz_decode(bytes, i)?;
-        let (candidate_pow_receipt_roots, i) = <_>::ssz_decode(bytes, i)?;
+        let (batched_block_roots, i) = <_>::ssz_decode(bytes, i)?;
+        let (latest_deposit_root, i) = <_>::ssz_decode(bytes, i)?;
+        let (deposit_root_votes, i) = <_>::ssz_decode(bytes, i)?;
 
         Ok((
             Self {
@@ -121,11 +122,10 @@ impl Decodable for BeaconState {
                 validator_registry_latest_change_slot,
                 validator_registry_exit_count,
                 validator_registry_delta_chain_tip,
-                randao_mix,
-                next_seed,
+                latest_randao_mixes,
+                latest_vdf_outputs,
                 shard_committees_at_slots,
-                persistent_committees,
-                persistent_committee_reassignments,
+                custody_challenges,
                 previous_justified_slot,
                 justified_slot,
                 justification_bitfield,
@@ -134,8 +134,9 @@ impl Decodable for BeaconState {
                 latest_block_roots,
                 latest_penalized_exit_balances,
                 latest_attestations,
-                processed_pow_receipt_root,
-                candidate_pow_receipt_roots,
+                batched_block_roots,
+                latest_deposit_root,
+                deposit_root_votes,
             },
             i,
         ))
@@ -153,11 +154,10 @@ impl<T: RngCore> TestRandom<T> for BeaconState {
             validator_registry_latest_change_slot: <_>::random_for_test(rng),
             validator_registry_exit_count: <_>::random_for_test(rng),
             validator_registry_delta_chain_tip: <_>::random_for_test(rng),
-            randao_mix: <_>::random_for_test(rng),
-            next_seed: <_>::random_for_test(rng),
+            latest_randao_mixes: <_>::random_for_test(rng),
+            latest_vdf_outputs: <_>::random_for_test(rng),
             shard_committees_at_slots: <_>::random_for_test(rng),
-            persistent_committees: <_>::random_for_test(rng),
-            persistent_committee_reassignments: <_>::random_for_test(rng),
+            custody_challenges: <_>::random_for_test(rng),
             previous_justified_slot: <_>::random_for_test(rng),
             justified_slot: <_>::random_for_test(rng),
             justification_bitfield: <_>::random_for_test(rng),
@@ -166,8 +166,9 @@ impl<T: RngCore> TestRandom<T> for BeaconState {
             latest_block_roots: <_>::random_for_test(rng),
             latest_penalized_exit_balances: <_>::random_for_test(rng),
             latest_attestations: <_>::random_for_test(rng),
-            processed_pow_receipt_root: <_>::random_for_test(rng),
-            candidate_pow_receipt_roots: <_>::random_for_test(rng),
+            batched_block_roots: <_>::random_for_test(rng),
+            latest_deposit_root: <_>::random_for_test(rng),
+            deposit_root_votes: <_>::random_for_test(rng),
         }
     }
 }
