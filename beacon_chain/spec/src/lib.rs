@@ -18,11 +18,14 @@ pub struct ChainSpec {
     pub beacon_chain_shard_number: u64,
     pub bls_withdrawal_prefix_byte: u8,
     pub max_casper_votes: u64,
+    pub latest_randao_mixes_length: u64,
+    pub latest_penalized_exit_length: u64,
     /*
      *  Deposit contract
      */
     pub deposit_contract_address: Address,
     pub deposit_contract_tree_depth: u64,
+    pub latest_deposit_root: Hash256,
     pub min_deposit: u64,
     pub max_deposit: u64,
     /*

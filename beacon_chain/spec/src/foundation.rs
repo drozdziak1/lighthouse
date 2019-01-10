@@ -24,11 +24,14 @@ impl ChainSpec {
             beacon_chain_shard_number: u64::max_value(),
             bls_withdrawal_prefix_byte: 0x00,
             max_casper_votes: 1_024,
+            latest_randao_mixes_length: 8_192,
+            latest_penalized_exit_length: 8_192,
             /*
              *  Deposit contract
              */
             deposit_contract_address: Address::from("TBD".as_bytes()),
             deposit_contract_tree_depth: 32,
+            latest_deposit_root: Hash256::default(),
             min_deposit: 1,
             max_deposit: 32,
             /*
