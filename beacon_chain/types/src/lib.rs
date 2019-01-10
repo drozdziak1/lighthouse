@@ -16,6 +16,7 @@ pub mod crosslink_record;
 pub mod deposit;
 pub mod deposit_data;
 pub mod deposit_input;
+pub mod deposit_root_vote;
 pub mod exit;
 pub mod fork_data;
 pub mod pending_attestation_record;
