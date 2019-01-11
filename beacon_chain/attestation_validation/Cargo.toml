@@ -10,3 +10,4 @@ db = { path = "../../lighthouse/db" }
 hashing = { path = "../utils/hashing" }
 ssz = { path = "../utils/ssz" }
 types = { path = "../types" }
+failure = "0.1.5"
