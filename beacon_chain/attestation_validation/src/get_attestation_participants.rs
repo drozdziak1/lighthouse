@@ -2,7 +2,8 @@
 //! (https://github.com/ethereum/eth2.0-specs/blob/master/specs/core/0_beacon-chain.md#get_attestation_participants)
 
 use failure::{Error, Fail};
-use types::{AttestationData, BeaconState, Bitfield, ShardCommittee};
+use spec::ChainSpec;
+use types::{AttestationData, BeaconState, Bitfield};
 
 #[derive(Debug, Fail)]
 /// An error type for `get_attestation_participants()` problems
@@ -20,13 +21,6 @@ pub enum AttestationParticipantError {
 
 use self::AttestationParticipantError::*;
 
-fn dummy_get_shard_committee_at_slot(
-    state: &BeaconState,
-    slot: u64,
-) -> Result<Vec<ShardCommittee>, Error> {
-    Ok(vec![])
-}
-
 /// Get validator indices partaking in the attestation described by `attestation_data` and
 /// `participation_bitfield`.
 pub fn get_attestation_participants(
@@ -35,7 +29,9 @@ pub fn get_attestation_participants(
     participation_bitfield: &Bitfield,
 ) -> Result<Vec<usize>, Error> {
     // Find the relevant committee
-    let shard_committees = dummy_get_shard_committee_at_slot(state, attestation_data.slot)?;
+    let shard_committees = state
+        .get_shard_committees_at_slot(attestation_data.slot, ChainSpec::foundation().epoch_length)
+        .unwrap();
     let shard_committee = match shard_committees
         .iter()
         .filter(|committee| committee.shard == attestation_data.shard)

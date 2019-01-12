@@ -9,5 +9,6 @@ bls = { path = "../utils/bls" }
 db = { path = "../../lighthouse/db" }
 hashing = { path = "../utils/hashing" }
 ssz = { path = "../utils/ssz" }
+spec = { path = "../spec" }
 types = { path = "../types" }
 failure = "0.1.5"
